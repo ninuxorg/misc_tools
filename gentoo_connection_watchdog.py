@@ -1,3 +1,7 @@
+# Add this using "crontab -e"
+# */5 * * * * python /root/gentoo_connection_watchdog.py > /dev/null 2>&1
+
+
 import os
 import sys
 import time
