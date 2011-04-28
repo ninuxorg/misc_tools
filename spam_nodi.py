@@ -8,57 +8,58 @@ email_text = '''
 Caro %s referente per il nodo %s della rete
 ninux.org, ricevi questa mail in quanto %s
 
-Come avrai forse potuto vedere, dopo una fase pionieristica di
-sperimentazione e progettazione la comunita' ninux.org e' decisamente
-passata alla fase di realizzazione della nostra rete wireless; i nodi
-attivi sono aumentati e cosi' le zone raggiunte, anche fuori Roma. Ogni
-giorno si accendono nuovi nodi e vecchi nodi potenziali sono ora nodi
-attivi funzionanti e partecipi a questo grande progetto di liberta'.
-Puoi vedere tu stesso l'avanzamento della rete attraverso il map server 
-all'indirizzo http://map.ninux.org/ .
+---- SHORT VERSION ----
 
-Ora vogliamo fare un ulteriore salto e cercare di trasformare
-l'interesse dei tanti che, come te, lo hanno manifestato da piu' o meno
-tempo, in una collaborazione informata, consapevole e fattiva.
+Ninux ti invita Sabato 21 Maggio ore 11:00 presso i locali del CSOA
+Sans Papier, via Carlo Felice 69 per la Ninux Academy. Presentazioni e
+seminari sul progetto Ninux.org, come costruire il proprio nodo, come
+mantenerlo e vivere felici dentro la nostra rete :)
 
-Stiamo preparando per il 21 Maggio un incontro per condividere, con tutte le persone interessate al nostro progetto, quello che abbiamo imparato e porre le basi per un
-allargamento del gruppo.
-In questo incontro spiegheremo cosa e' la rete ninux, come vorremmo
-svilupparla, qual e' lo spirito della community; illustreremo le tecniche
-per allestirsi da soli il proprio nodo, come identificare un possibile
-vicino con cui collegarsi, quali sono le situazioni favorevoli e quelle
-da evitare per far rendere al meglio il collegamento; materiali,
-apparati, configurazioni, cablaggi, ferramenta e strumenti di ausilio
-alla installazione.
+---- LONG VERSION ----
 
-Spiegheremo con quali semplici comandi sia possibile diagnosticare lo 
-stato del proprio nodo e risolvere da soli i problemi piu' comuni che 
-possono insorgere nel suo funzionamento quotidiano.
+Dopo una fase pionieristica di sperimentazione e progettazione la
+comunita' ninux.org e' decisamente passata alla fase di realizzazione
+della rete; i nodi attivi sono aumentati e cosi' le zone raggiunte,
+anche fuori Roma. Ogni giorno si accendono nuovi nodi e vecchi nodi
+potenziali sono ora nodi attivi funzionanti e partecipi a questo progetto
+di liberta'. Puoi vedere tu stesso l'avanzamento della rete attraverso
+il map server all'indirizzo http://map.ninux.org/
 
-Per coloro piu' interessati invece ai protocolli di rete illustreremo
-tutti quelli che hanno un ruolo nella nostra rete; e siccome ninux e' gia'
-predisposta per la IPv6, includeremo un accenno anche al nuovo
-protocollo della rete Internet.
+Ora vogliamo fare un ulteriore salto e cercare di trasformare l'interesse
+dei tanti che, come te, lo hanno manifestato da piu' o meno tempo,
+in una collaborazione informata, consapevole e partecipata.
 
-Ovviamente saremo a disposizione per qualsiasi dubbio o domanda di
-approfondimento tu voglia farci e che possa contribuire a farti
-comprendere meglio, sotto ogni punto di vista, cosa e' ninux, cosa puo'
-dare e quali ne sono i confini che vi abbiamo stabilito.
+Stiamo preparando per il 21 Maggio un incontro per condividere quello
+che abbiamo imparato e porre le basi per un allargamento della rete.
+In questo incontro racconteremo cosa e' la rete ninux, come vorremmo
+svilupparla, qual e' lo spirito della community; vedremo insieme
+nella pratica le tecniche per allestirsi da soli il proprio nodo,
+come identificare un possibile vicino con cui collegarsi, quali sono le
+situazioni favorevoli e quelle da evitare per far rendere al meglio il
+collegamento; materiali, apparati, configurazioni, cablaggi, ferramenta
+e strumenti di ausilio alla installazione.
 
-Pertanto, se ritieni che la tua adesione come potenziale nodo possa
-evolvere, ti invitiamo a raggiungerci Sabato 21 Maggio a partire dalle
-14.00, presso i locali del CSOA Sans Papier, via Carlo Felice 69 
+Per chi e' gia' all'interno della rete, vedremo con quali semplici comandi
+sia possibile diagnosticare lo stato del proprio nodo e risolvere da
+soli i problemi piu' comuni che possono insorgere nel suo funzionamento
+quotidiano.
 
-Un cordiale arrivederci.
+Per il programma completo ti rimandiamo al nostro wiki:
+
+http://wiki.ninux.org/NinuxAcademy2011
+
+Ti invitiamo a raggiungerci Sabato 21 Maggio a partire dalle 11:00,
+presso i locali del CSOA Sans Papier, via Carlo Felice 69
+
 
 La community ninux.org
 
-
+--
 http://www.ninux.org (sito)
 http://blog.ninux.org/ (blog)
 '''
 
-conn = MySQLdb.connect(host="10.0.1.1", user="wnmap", passwd="XXXX", db="wnmapunstable")
+conn = MySQLdb.connect(host="10.0.1.1", user="wnmap", passwd="XXXXXX", db="wnmapunstable")
 cursore = conn.cursor()
 link_cursore = conn.cursor()
 cursore.execute('SELECT nodeName, status, userEmail, userRealName FROM nodes')
@@ -73,7 +74,7 @@ for record in cursore.fetchall():
         reason = "partecipante attivo della community."
     else:
         node_status = 'potenziale'
-        reason = "hai segnalato alla nostra community il tuo interesse a farne parte, registrandoti sulla mappa e lasciando questo recapito."
+        reason = "hai segnalato alla community il tuo interesse a farne parte, registrandoti sulla mappa e lasciando questo recapito."
     if email_list.has_key(record[2]):
         email_list[record[2]]['node_name'].append( ", " + str(record[0]) + " (" + node_status + ")" ) 
         if node_status != 'potenziale' :
