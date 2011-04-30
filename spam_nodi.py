@@ -1,12 +1,14 @@
-import smtplib, os
+import smtplib, os, time 
 from email.mime.text import MIMEText
 import MySQLdb
-import re
+import re, textwrap
     
 fromaddr = "contatti@ninux.org"
-email_text = '''
-Caro %s referente per il nodo %s della rete
+email_first = '''Caro %s referente per il nodo %s della rete
 ninux.org, ricevi questa mail in quanto %s
+'''
+
+email_last = '''
 
 ---- SHORT VERSION ----
 
@@ -14,6 +16,9 @@ Ninux ti invita Sabato 21 Maggio ore 11:00 presso i locali del CSOA
 Sans Papier, via Carlo Felice 69 per la Ninux Academy. Presentazioni e
 seminari sul progetto Ninux.org, come costruire il proprio nodo, come
 mantenerlo e vivere felici dentro la nostra rete :)
+
+Per vedere il programma completo:
+http://wiki.ninux.org/NinuxAcademy2011
 
 ---- LONG VERSION ----
 
@@ -59,7 +64,7 @@ http://www.ninux.org (sito)
 http://blog.ninux.org/ (blog)
 '''
 
-conn = MySQLdb.connect(host="10.0.1.1", user="wnmap", passwd="XXXXXX", db="wnmapunstable")
+conn = MySQLdb.connect(host="10.0.1.1", user="wnmap", passwd="XXXXX", db="wnmapunstable")
 cursore = conn.cursor()
 link_cursore = conn.cursor()
 cursore.execute('SELECT nodeName, status, userEmail, userRealName FROM nodes')
@@ -84,16 +89,16 @@ for record in cursore.fetchall():
    
 for k, v in email_list.items():
     print "Sending email to " + k
-    msg = MIMEText(email_text % ( v['name'], ' '.join(v['node_name']) , v['reason'] ) )
+    msg = MIMEText(textwrap.fill( email_first % ( v['name'], ' '.join(v['node_name']) , v['reason'] ), 72) + email_last )
     msg['Subject'] = 'Ninux.org ti invita alla Ninux Academy'
     msg['From'] = fromaddr
-    k = 'contatti-roma@ninux.org'
+    #k = 'lorenzo.bracciale@uniroma2.it'
     msg['To'] = k 
 
     server = smtplib.SMTP('localhost')
     server.set_debuglevel(1)
     server.sendmail(fromaddr, k , msg.as_string() )
     server.quit()
-    print msg
-    break
+    print "sent to " + k + "\n" 
+    time.sleep(1)
 
