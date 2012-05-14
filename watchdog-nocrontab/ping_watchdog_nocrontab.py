@@ -4,13 +4,7 @@ import time
 import smtplib
 import datetime
 
-IPtocheck = ""
-smtpserver = ""
-fromemail = ""
-toemail = ""
-subject = ""
-body = ""
-logfile = ""
+from settings import *
 
 def logToFile(string,logfile):
 	f=open(logfile,'a')
