@@ -1,0 +1,8 @@
+= Dynamic ADSL failure detection =
+
+This script(s) should be used in conjunction with the olsrd dynamic gateway
+plugin and are aimed at OpenWrt systems.
+
+http://wiki.ninux.org/adsl_check
+
+

@@ -1,0 +1,17 @@
+#!/bin/sh /etc/rc.common
+START=50
+
+# this script should be placed inside /etc/init.d/
+
+start() {
+
+adsl_check.sh &
+
+}
+
+stop() {
+
+killall adsl_check.sh
+
+}
+
