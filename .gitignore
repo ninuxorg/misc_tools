@@ -1,3 +1,5 @@
 watchdog-nocrontab/settings.py
-watchdog-nocrontab/settings.pyc
 watchdog-nocrontab/watchdog.log
+*.pyc
+cap_ninux.png
+listacomuni.txt
