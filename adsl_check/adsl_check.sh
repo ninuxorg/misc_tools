@@ -10,7 +10,8 @@ ADSL_GW='192.168.1.254' #Address of the ADSL Gateway
 RT_TABLE=detection_table #Name of the new routing table for ADSL gw malfunction detection
 RT_TABLE_NUM=201 #Number of the routing table for ADSL gw malfunction detection
 
-grep $RT_TABLE /etc/iproute2/rt_tables || ((echo $RT_TABLE_NUM $RT_TABLE >> /etc/iproute2/rt_tables) && (ip route add table $RT_TABLE default via $ADSL_GW)) 
+grep $RT_TABLE /etc/iproute2/rt_tables || (echo $RT_TABLE_NUM $RT_TABLE >> /etc/iproute2/rt_tables) 
+ip route add table $RT_TABLE default via $ADSL_GW 2>/dev/null
 
 (ip rule show | grep -F ${IP_PING}) || ip rule add to $IP_PING table $RT_TABLE 
 
