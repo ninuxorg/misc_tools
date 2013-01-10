@@ -11,15 +11,15 @@ RT_TABLE=detection_table #Name of the new routing table for ADSL gw malfunction 
 RT_TABLE_NUM=201 #Number of the routing table for ADSL gw malfunction detection
 
 (grep $RT_TABLE /etc/iproute2/rt_tables >/dev/null) || (echo $RT_TABLE_NUM $RT_TABLE >> /etc/iproute2/rt_tables)
-(ip route show table $RT_TABLE |grep -F $ADSL_GW >/dev/null) || (ip route add table $RT_TABLE default via $ADSL_GW) 
+(ip r s table $RT_TABLE |grep -F $ADSL_GW >/dev/null) || (ip route add table $RT_TABLE default via $ADSL_GW) 
 
-(ip rule show | grep -F ${IP_PING}) || (ip rule add to $IP_PING table $RT_TABLE)
+(ip rule show |grep -F $IP_PING >/dev/null) || (ip rule add to $IP_PING table $RT_TABLE pref 500) 
 
 while [ 1 ]; do
 		if ping -q -c 1 $IP_PING >/dev/null 2>/dev/null; then
-				(ip r s |grep -F $ADSL_GW >/dev/null) || ip route add default via $ADSL_GW
+			(ip r s |grep -F $ADSL_GW >/dev/null) || (ip route add default via $ADSL_GW && /etc/init.d/olsrd restart)
 		else
-				(ip r s |grep -F $ADSL_GW >/dev/null) && ip route del default via $ADSL_GW
+			(ip r s |grep -F $ADSL_GW >/dev/null) && (ip route del default via $ADSL_GW && /etc/init.d/olsrd restart)
 		fi
 		sleep 50
 done
