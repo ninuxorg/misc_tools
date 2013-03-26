@@ -2,5 +2,5 @@
 config  LoadPlugin
         option  library olsrd_dyn_gw.so.0.5
         option  Interval 50
-        option  Ping  78.47.48.238
+        option  Ping  176.9.211.209
 
