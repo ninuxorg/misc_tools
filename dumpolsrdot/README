@@ -1,0 +1,3 @@
+Questo script si utilizza con il dot_draw plugin di olsrd. Esempio:
+
+./dumpolsrdot.py | dot -Tpng | display -
