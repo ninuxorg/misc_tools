@@ -1,0 +1,30 @@
+Logmanage script
+
+The purpose of this script is to route log messages come from differt devices in lan to log server sysklogd.
+Sysklogd is a very minimal log server installed in most embedded systems and it doesn't provide like other version (e.g. syslogd syslog-ng) to filter the from field of the massages to route them in a specific logfile. (with +hostname entry in syslogd.conf).
+
+Usage
+
+1) Identify the specific facility that you want to filter, for example: 
+cron, auth and syslog. Setup the script with dafult folder for log files and put the three names in the declared vector
+logdir="/var/log/"
+fifodir="/var/log/"
+# Name of logs
+logname=(auth cron syslog)
+
+2) In /etc/syslog.conf 
+auth,authpriv.*                 /var/log/auth.fifo
+*.*;auth,authpriv,cron.none     /var/log/syslog.fifo
+cron.*                          /var/log/cron.fifo
+
+3) In the script startup
+/path/logmanager.sh run
+/sbin/syslogd -m 0 -r
+
+4) In log directories there are  file like:
+syslog-<machineIP>.log, cron-<machineIP>.log and so on .....
+
+5) If you stop the log service, then run logmanager.sh flush
+ 
+
+
