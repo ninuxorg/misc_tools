@@ -1,4 +1,5 @@
 Logmanage script
+---------------
 
 The purpose of this script is to route log messages come from differt devices in lan to log server sysklogd.
 Sysklogd is a very minimal log server installed in most embedded systems and it doesn't provide like other version (e.g. syslogd syslog-ng) to filter the from field of the massages to route them in a specific logfile. (with +hostname entry in syslogd.conf).
@@ -25,6 +26,38 @@ cron.*                          /var/log/cron.fifo
 syslog-<machineIP>.log, cron-<machineIP>.log and so on .....
 
 5) If you stop the log service, then run logmanager.sh flush
+
+6) Example setup of logrotate:
+
+/var/log/syslog-*.log {                                                                      
+        monthly                                                                              
+        rotate 4                                                                             
+        compress                                                                             
+        delaycompress                                                                        
+        missingok                                                                            
+        notifempty                                                                           
+        create 644 root root                                                                 
+}                                                                                            
+                                                                                             
+/var/log/cron-*.log {                                                                        
+        monthly                                                                              
+        rotate 4                                                                             
+        compress                                                                             
+        delaycompress                                                                        
+        missingok                                                                            
+        notifempty                                                                           
+        create 644 root root                                                                 
+}                                                                                            
+                                                                                             
+/var/log/auth-*.log {                                                                        
+        monthly                                                                              
+        rotate 4                                                                             
+        compress                                                                             
+        delaycompress                                                                        
+        missingok                                                                            
+        notifempty                                                                           
+        create 644 root root                                                                 
+} 
  
 
-
+FaByS
