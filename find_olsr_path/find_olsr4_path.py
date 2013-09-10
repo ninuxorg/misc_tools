@@ -12,12 +12,22 @@ class InvalidOlsrJsonException(Exception):
 class oneWayLink():
   "a one-way OLSR link"
   def __init__(self, linkDict):
+    if linkDict == None:
+            return
     if not linkDict.has_key('destinationIP') or not linkDict.has_key('lastHopIP') or not linkDict.has_key('linkQuality') or not linkDict.has_key('neighborLinkQuality') or not linkDict.has_key('tcEdgeCost'):
       raise InvalidOlsrJsonException
     self.__dict__.update(linkDict)
 
   def __repr__(self):
     return repr(self.__dict__)
+
+  def aliased_link(self, destination, lasthop):
+    "return a copy of the link with changed IP addresses"
+    a = oneWayLink(None)
+    a.__dict__.update(self.__dict__)
+    a.destinationIP = destination
+    a.lastHopIP = lasthop
+    return a
 
 class OlsrTopology():
   "an OLSR topology"
@@ -45,6 +55,12 @@ class OlsrTopology():
     return json_topology
  
   def update_topology(self):
+    json_mids = self.get_from_jsoninfo("/mid")
+    aliaslist = json.loads(json_mids)['mid']
+    aliasdict = {}
+    for aliasdef in aliaslist:
+      aliasdict[aliasdef['ipAddress']] = [ alias['ipAddress'] for alias in aliasdef['aliases'] ]
+
     json_topology = self.get_from_jsoninfo("/topology")
     topolist = json.loads(json_topology)['topology']
 
@@ -55,8 +71,20 @@ class OlsrTopology():
       reverselinks = [lnk for lnk in tmplinklist if lnk.destinationIP == link.lastHopIP and lnk.lastHopIP == link.destinationIP]
       assert len(reverselinks) == 1
       self.linklist.append(link)
-    
-    #TODO: download also MIDs
+
+    # add all aliases
+    aliaslinks = []
+    for link in self.linklist:
+      if aliasdict.has_key(link.destinationIP) and aliasdict.has_key(link.lastHopIP):
+        al = [link.aliased_link(a, b) for a in aliasdict[link.destinationIP] for b in aliasdict[link.lastHopIP]]
+      elif aliasdict.has_key(link.destinationIP):
+        al = [link.aliased_link(a, link.lastHopIP) for a in aliasdict[link.destinationIP]]
+      elif aliasdict.has_key(link.lastHopIP):
+        al = [link.aliased_link(link.destinationIP, b) for b in aliasdict[link.lastHopIP]]
+      else:
+        al = []
+      aliaslinks += al
+    self.linklist += aliaslinks
 
     self.addressset = set([lnk.destinationIP for lnk in self.linklist] + [lnk.lastHopIP for link in self.linklist])
 
