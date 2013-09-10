@@ -33,6 +33,7 @@ class OlsrTopology():
   "an OLSR topology"
   linklist = []
   addressset = set()
+  aliasdict = {}
 
   def __init__(self, urlorfile):
     self.urlorfile = urlorfile
@@ -57,9 +58,8 @@ class OlsrTopology():
   def update_topology(self):
     json_mids = self.get_from_jsoninfo("/mid")
     aliaslist = json.loads(json_mids)['mid']
-    aliasdict = {}
     for aliasdef in aliaslist:
-      aliasdict[aliasdef['ipAddress']] = [ alias['ipAddress'] for alias in aliasdef['aliases'] ]
+      self.aliasdict[aliasdef['ipAddress']] = [ alias['ipAddress'] for alias in aliasdef['aliases'] ]
 
     json_topology = self.get_from_jsoninfo("/topology")
     topolist = json.loads(json_topology)['topology']
@@ -71,20 +71,6 @@ class OlsrTopology():
       reverselinks = [lnk for lnk in tmplinklist if lnk.destinationIP == link.lastHopIP and lnk.lastHopIP == link.destinationIP]
       assert len(reverselinks) == 1
       self.linklist.append(link)
-
-    # add all aliases
-    aliaslinks = []
-    for link in self.linklist:
-      if aliasdict.has_key(link.destinationIP) and aliasdict.has_key(link.lastHopIP):
-        al = [link.aliased_link(a, b) for a in aliasdict[link.destinationIP] for b in aliasdict[link.lastHopIP]]
-      elif aliasdict.has_key(link.destinationIP):
-        al = [link.aliased_link(a, link.lastHopIP) for a in aliasdict[link.destinationIP]]
-      elif aliasdict.has_key(link.lastHopIP):
-        al = [link.aliased_link(link.destinationIP, b) for b in aliasdict[link.lastHopIP]]
-      else:
-        al = []
-      aliaslinks += al
-    self.linklist += aliaslinks
 
     self.addressset = set([lnk.destinationIP for lnk in self.linklist] + [lnk.lastHopIP for link in self.linklist])
 
@@ -101,10 +87,30 @@ class OlsrTopology():
   def is_gateway(self, address):
     return address in self.gatewaylist
 
-  def get_shortest_path(self, source, destination):
+  def getAliases(self, addr):
+    if self.aliasdict.has_key(addr):
+      return self.aliasdict[addr]
+    else:
+      return []
+
+  def getMainAddress(self, addr):
+    if self.aliasdict.has_key(addr):
+      return addr
+    for mainaddr, aliases in self.aliasdict.iteritems():
+      for alias in aliases:
+        if alias == addr:
+          return mainaddr
+    # assume it is a main address with no aliases (i.e. the only OLSR IP address of the node)
+    return addr
+
+  def get_shortest_path(self, u_source, u_destination):
+    source = self.getMainAddress(u_source)
+    destination = self.getMainAddress(u_destination)
+
     G = nx.DiGraph()
     #G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, 1 / (link.linkQuality * link.neighborLinkQuality)) for link in self.linklist])
     G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, link.tcEdgeCost) for link in self.linklist])
+
     if self.is_in_topology(source) and self.is_in_topology(destination):
       return nx.dijkstra_path(G, source, destination)
     elif self.is_in_topology(source):
@@ -133,5 +139,7 @@ if __name__ == "__main__":
         src = sys.argv[2]
         dst = sys.argv[3]
         t = OlsrTopology(urlorfile)
-        print "\n".join(t.get_shortest_path(src, dst))
+        for hop in t.get_shortest_path(src, dst):
+          print hop + "\t (" + ", ".join(t.getAliases(hop)) + ")"
+
 
