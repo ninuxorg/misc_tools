@@ -6,8 +6,10 @@ import urllib2
 import sys
 import json
 
+
 class InvalidOlsrJsonException(Exception):
   pass
+
 
 class oneWayLink():
   "a one-way OLSR link"
@@ -29,15 +31,49 @@ class oneWayLink():
     a.lastHopIP = lasthop
     return a
 
+
+class Hna():
+  "an OLSR HNA entry"
+  def __init__(self, linkDict):
+    if linkDict == None:
+            return
+    if not linkDict.has_key('destination') or not linkDict.has_key('genmask') or not linkDict.has_key('gateway'):
+      raise InvalidOlsrJsonException
+    self.__dict__.update(linkDict)
+
+  def __repr__(self):
+    return repr(self.__dict__)
+
+  def __dotted_decimal_2_int(self, ip_address):
+    dotteddecimals = ip_address.split('.')
+    bip = 0
+    for d in dotteddecimals:
+        i = int(d)
+        bip = bip << 8
+        bip += i
+    return bip
+
+  def ip_in_net(self, ip_address):
+    "return True iff ip_address belongs to this HNA"
+    bip = self.__dotted_decimal_2_int(ip_address)
+    bnet = self.__dotted_decimal_2_int(self.destination)
+    l = int(self.genmask)
+    bmask = int("0b" + "1" * l + "0" * (32-l), 2)
+    return bip & bmask == bnet
+
+
 class OlsrTopology():
   "an OLSR topology"
   linklist = []
   addressset = set()
   aliasdict = {}
+  hnalist = []
 
   def __init__(self, urlorfile):
     self.urlorfile = urlorfile
     self.update_topology()
+    self.update_mids()
+    self.update_hnas()
     self.update_gateways()
 
   def get_from_jsoninfo(self, urlappend):
@@ -56,11 +92,6 @@ class OlsrTopology():
     return json_topology
  
   def update_topology(self):
-    json_mids = self.get_from_jsoninfo("/mid")
-    aliaslist = json.loads(json_mids)['mid']
-    for aliasdef in aliaslist:
-      self.aliasdict[aliasdef['ipAddress']] = [ alias['ipAddress'] for alias in aliasdef['aliases'] ]
-
     json_topology = self.get_from_jsoninfo("/topology")
     topolist = json.loads(json_topology)['topology']
 
@@ -74,15 +105,23 @@ class OlsrTopology():
 
     self.addressset = set([lnk.destinationIP for lnk in self.linklist] + [lnk.lastHopIP for link in self.linklist])
 
+  def update_mids(self):
+    json_mids = self.get_from_jsoninfo("/mid")
+    aliaslist = json.loads(json_mids)['mid']
+    for aliasdef in aliaslist:
+      self.aliasdict[aliasdef['ipAddress']] = [ alias['ipAddress'] for alias in aliasdef['aliases'] ]
+
+  def update_hnas(self):
+    json_hnas = self.get_from_jsoninfo("/hna")
+    hnalist = json.loads(json_hnas)['hna']
+    for hna in hnalist:
+      self.hnalist.append(Hna(hna))
+
   def update_gateways(self):
     json_topology = self.get_from_jsoninfo("/hna")
     hnalist = json.loads(json_topology)['hna']
 
     self.gatewaylist = [hna['gateway'] for hna in hnalist if hna['destination'] == "0.0.0.0"]
-
-  def is_in_topology(self, address):
-    "returns true if the given IP address is a node of the topology graph"
-    return address in self.addressset
 
   def is_gateway(self, address):
     return address in self.gatewaylist
@@ -92,6 +131,14 @@ class OlsrTopology():
       return self.aliasdict[addr]
     else:
       return []
+
+  def getHnaGateway(self, addr):
+    """if the IP address belongs to an HNA then return the IP address 
+    of the node announcing the HNA. Else return addr."""
+    for hna in self.hnalist:
+      if hna.ip_in_net(addr):
+        return hna.gateway
+    return addr
 
   def getMainAddress(self, addr):
     if self.aliasdict.has_key(addr):
@@ -104,16 +151,27 @@ class OlsrTopology():
     return addr
 
   def get_shortest_path(self, u_source, u_destination):
-    source = self.getMainAddress(u_source)
-    destination = self.getMainAddress(u_destination)
-
     G = nx.DiGraph()
     #G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, 1 / (link.linkQuality * link.neighborLinkQuality)) for link in self.linklist])
     G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, link.tcEdgeCost) for link in self.linklist])
 
-    if self.is_in_topology(source) and self.is_in_topology(destination):
+    source = self.getMainAddress(u_source)
+    if source == u_source:
+      source = self.getHnaGateway(u_source)
+      if source != u_source:
+        G.add_weighted_edges_from([(u_source, source, 1024)])
+        source = u_source
+
+    destination = self.getMainAddress(u_destination)
+    if destination == u_destination:
+      destination = self.getHnaGateway(u_destination)
+      if destination != u_destination:
+        G.add_weighted_edges_from([(destination, u_destination, 1024)])
+        destination = u_destination
+
+    if source in G.nodes() and destination in G.nodes():
       return nx.dijkstra_path(G, source, destination)
-    elif self.is_in_topology(source):
+    elif source in G.nodes():
       # find the closest gateway
       closestgw = None
       cost = 0
@@ -139,7 +197,16 @@ if __name__ == "__main__":
         src = sys.argv[2]
         dst = sys.argv[3]
         t = OlsrTopology(urlorfile)
-        for hop in t.get_shortest_path(src, dst):
-          print hop + "\t (" + ", ".join(t.getAliases(hop)) + ")"
+        path = t.get_shortest_path(src, dst)
+        if path == None or len(path) < 1:
+                print "No path found. Please check the script parameters"
+                sys.exit(2)
+        for hop in path:
+          print hop,
+          aliases = t.getAliases(hop)
+          if len(aliases) < 1:
+            print ""
+          else:
+            print "\t (" + ", ".join(aliases) + ")"
 
 
