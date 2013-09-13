@@ -26,3 +26,8 @@ wget -q http://10.176.0.135:9090 -O - > all.json
 ./find_olsr4_path.py all.json 10.176.0.161 192.168.145.1
 
 
+== Author ==
+
+Claudio Pisa <clauz@ninux.org>
+
+
