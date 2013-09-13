@@ -152,8 +152,8 @@ class OlsrTopology():
 
   def get_shortest_path(self, u_source, u_destination):
     G = nx.DiGraph()
-    #G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, 1 / (link.linkQuality * link.neighborLinkQuality)) for link in self.linklist])
-    G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, link.tcEdgeCost) for link in self.linklist])
+    G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, 1 / (link.linkQuality * link.neighborLinkQuality)) for link in self.linklist])
+    #G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, link.tcEdgeCost) for link in self.linklist])
 
     source = self.getMainAddress(u_source)
     if source == u_source:
