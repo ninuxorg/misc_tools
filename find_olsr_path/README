@@ -1,0 +1,28 @@
+= Find shortest paths in OLSR networks =
+
+This script parses the output of the OLSR JSONinfo plug-in to find the Dijkstra
+shortest path between two IPs of an OLSR IPv4 network.
+
+
+== Dependencies ==
+
+ * python 2.7			http://python.org/
+ * python-networkx 		http://networkx.github.io/
+ * olsrd 				http://olsr.org/
+ * JSONinfo plug-in  	http://olsr.org/git/?p=olsrd.git;a=blob;f=lib/jsoninfo/README_JSONINFO;hb=HEAD
+ * a working OLSR network
+
+
+== Usage ==
+
+./find_olsr4_path.py <JSONinfo URL or file> <source IP address> <destination IP address>
+
+
+== Examples ==
+
+python2.7 find_olsr4_path.py http://127.0.0.1:9090 192.168.145.3 10.168.177.178
+
+wget -q http://10.176.0.135:9090 -O - > all.json
+./find_olsr4_path.py all.json 10.176.0.161 192.168.145.1
+
+
