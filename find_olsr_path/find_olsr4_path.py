@@ -76,7 +76,7 @@ class Hna():
     "return True iff ip_address belongs to this HNA"
     bip = self.__dotted_decimal_2_int(ip_address)
     bnet = self.__dotted_decimal_2_int(self.destination)
-    l = int(self.genmask)
+    l = self.genmask
     bmask = int("0b" + "1" * l + "0" * (32-l), 2)
     return bip & bmask == bnet
 
@@ -154,10 +154,13 @@ class OlsrTopology():
   def getHnaGateway(self, addr):
     """if the IP address belongs to an HNA then return the IP address 
     of the node announcing the HNA. Else return addr."""
+    gwresult = addr
+    gwmask = 0
     for hna in self.hnalist:
-      if hna.ip_in_net(addr):
-        return hna.gateway
-    return addr
+      if hna.genmask > gwmask and hna.ip_in_net(addr):
+        gwresult = hna.gateway
+        mask = hna.genmask
+    return gwresult
 
   def getMainAddress(self, addr):
     if self.aliasdict.has_key(addr):
@@ -178,14 +181,16 @@ class OlsrTopology():
     if source == u_source:
       source = self.getHnaGateway(u_source)
       if source != u_source:
-        G.add_weighted_edges_from([(u_source, source, 1024)])
+        print "Source %s is in an HNA. Using %s for path computation." % (u_source, source)
+        G.add_weighted_edges_from([(u_source, source, 0)])
         source = u_source
 
     destination = self.getMainAddress(u_destination)
     if destination == u_destination:
       destination = self.getHnaGateway(u_destination)
       if destination != u_destination:
-        G.add_weighted_edges_from([(destination, u_destination, 1024)])
+        print "Destination %s is in an HNA. Using %s for path computation." % (u_destination, destination)
+        G.add_weighted_edges_from([(destination, u_destination, 0)])
         destination = u_destination
 
     if source in G.nodes() and destination in G.nodes():
