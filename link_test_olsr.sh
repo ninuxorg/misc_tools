@@ -1,4 +1,5 @@
 #!/bin/bash
+# Version Beta 2.0
 # USAGE sh ./link_test_olsr.sh IP_DEL_GATEWAY_OLSR
 # Sequenze escape dei colori
 C_WHITE='\033[1;37m'
@@ -36,6 +37,7 @@ Grep=$(which grep)              || ErrorMsg="grep";
 Sort=$(which sort)              || ErrorMsg="sorti";
 Uniq=$(which uniq)              || ErrorMsg="uniq";
 Egrep=$(which egrep)            || ErrorMsg="egrep";
+Tr=$(which tr)                  || ErrorMsg="tr";
 
 if [ ! -z "${ErrorMsg}" ] ; then
         echo "Command not found: ${ErrorMsg}"
@@ -47,16 +49,36 @@ ${Echo} -e "${C_WHITE}STA IP\t\tAP IP\t\tHyst.\tLQ\tNLQ\tCost${C_DEFAULT}"
 ${Wget} -q -O - http://${1}:2006/topo | ${Awk} '{print $1}' | ${Grep} "172.1" | ${Sort} -n | ${Uniq} 2>/dev/null | while read Topo_v4; do
 	${Wget} -q -O - http://${Topo_v4}:2006/link | ${Egrep} -e '172.1|192.168|10.' | ${Sort} -n | ${Sed} -e 's/[^0-9]*$//' 2>/dev/null | while read Link_v4; do
 		${Wget} -q -O - http://${Topo_v4}:2007/link >/dev/null 2>&1 && TEST_V6=1 || TEST_V6=0
-		[ ${TEST_V6} -eq 1 ] && Link_v6=$( ${Wget} -q -O - http://${Topo_v4}:2007/link | grep "2001:" )
-		Remote_IP=$( ${Echo} "${Link_v4}" | ${Awk} '{print $2}' )
-		Test_class=$( ${Echo} "${Remote_IP}" | ${Grep} -v "172.1" | ${Awk} 'BEGIN { FS = "." } ; { print $1 }' )
-		if [ -z ${Test_class} ]
+		[ ${TEST_V6} -eq 1 ] && Link_v6L=$( ${Wget} -q -O - http://${Topo_v4}:2007/link | ${Grep} -v "2001:4c00:893b:1:" | ${Sed} -e 's/[^0-9]*$//' ) && Link_v6W=$( ${Wget} -q -O - http://${Topo_v4}:2007/link | ${Grep} "2001:4c00:893b:1:" )
+		Local_IP4=$( ${Echo} "${Link_v4}" | ${Grep} "172.1" | ${Awk} '{print $1}' )
+		Local_IP6L=$( ${Echo} -e "${Link_v6L}" | ${Awk} '{print $1}' | ${Tr} -s '\n' ' ' )
+		Local_IP6W=$( ${Echo} "${Link_v6W}" | ${Awk} '{print $1}' )
+		Remote_IP4=$( ${Echo} "${Link_v4}" | ${Awk} '{print $2}' )
+		Remote_IP6L=$( ${Echo} -e "${Link_v6L}" | ${Awk} '{print $2}' | ${Tr} -s '\n' ' ' )
+		Remote_IP6W=$( ${Echo} "${Link_v6W}" | ${Awk} '{print $2}' )
+		Hyst4=$( ${Echo} "${Link_v4}" | ${Awk} '{print $3}' )
+		Hyst6L=$( ${Echo} -e "${Link_v6L}" | ${Awk} '{print $3}' | ${Tr} -s '\n' ' ' )
+		Hyst6W=$( ${Echo} "${Link_v6W}" | ${Awk} '{print $3}' )
+		LQ4=$( ${Echo} "${Link_v4}" | ${Awk} '{print $4}' )
+		LQ6L=$( ${Echo} -e "${Link_v6L}" | ${Awk} '{print $4}' | ${Tr} -s '\n' ' ' )
+		LQ6W=$( ${Echo} "${Link_v6W}" | ${Awk} '{print $4}' )
+		NLQ4=$( ${Echo} "${Link_v4}" | ${Awk} '{print $5}' )
+		NLQ6L=$( ${Echo} -e "${Link_v6L}" | ${Awk} '{print $5}' | ${Tr} -s '\n' ' ' )
+		NLQ6W=$( ${Echo} "${Link_v6W}" | ${Awk} '{print $5}' )
+		Cost4=$( ${Echo} "${Link_v4}" | ${Awk} '{print $6}' )
+		Cost6L=$( ${Echo} -e "${Link_v6L}" | ${Awk} '{print $6}' | ${Tr} -s '\n' ' ' )
+		Cost6W=$( ${Echo} "${Link_v6W}" | ${Awk} '{print $6}' )
+		Test_class4=$( ${Echo} "${Remote_IP4}" | ${Grep} -v "172.1" | ${Awk} 'BEGIN { FS = "." } ; { print $1 }' )
+		if [ -z ${Test_class4} ]
 			then
-				${Echo} -e "${C_CYAN}${Link_v4}\n${Lan}" | ${Sed} -e '/^$/d'
-				${Echo} -e "${C_PURPLE}${Link_v6}${C_DEFAULT}" | ${Sed} -e '/^$/d'
+				IP4W=$( ${Echo} -e "${C_CYAN}${Local_IP4}\t${Remote_IP4}\t${Hyst4}\t${LQ4}\t${NLQ4}\t${Cost4}\n${IP4L}" | ${Sed} -e '/^$/d' )
+				IP6W=$( ${Echo} -e "${C_PURPLE}${Local_IP6W}\t${Remote_IP6W}\t${Hyst6W}\t${LQ6W}\t${NLQ6W}\t${Cost6W}${C_DEFAULT}" )
 			else
-				Lan=$( ${Echo} -e "${C_YELLOW}${Link_v4}" )
+				IP4L=$( ${Echo} -e "${C_YELLOW}${Link_v4}${C_DEFAULT}" )
+				IP6L=$( ${Echo} -e "${C_PURPLE}${Local_IP6L}\t${Remote_IP6L}\t${Hyst6L}\t${LQ6L}\t${NLQ6L}\t${Cost6L}${C_DEFAULT}" )
+				
 		fi
+		${Echo} -e "${IP4W}\n${IP6W}\n${IP6L}" | ${Sed} -e '/^$/d'
 	done
 done
 exit 0
