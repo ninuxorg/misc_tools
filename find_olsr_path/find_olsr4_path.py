@@ -172,9 +172,9 @@ class OlsrTopology():
     # assume it is a main address with no aliases (i.e. the only OLSR IP address of the node)
     return addr
 
-  def get_shortest_path(self, u_source, u_destination):
-    G = nx.DiGraph()
-    G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, 1 / (link.linkQuality * link.neighborLinkQuality)) for link in self.linklist])
+  def __loadG(self, u_source, u_destination):
+    self.G = nx.DiGraph()
+    self.G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, 1 / (link.linkQuality * link.neighborLinkQuality)) for link in self.linklist])
     #G.add_weighted_edges_from([(link.lastHopIP, link.destinationIP, link.tcEdgeCost) for link in self.linklist])
 
     source = self.getMainAddress(u_source)
@@ -182,7 +182,7 @@ class OlsrTopology():
       source = self.getHnaGateway(u_source)
       if source != u_source:
         #print "Source %s is in an HNA. Using %s for path computation." % (u_source, source)
-        G.add_weighted_edges_from([(u_source, source, 0)])
+        self.G.add_weighted_edges_from([(u_source, source, 0)])
         source = u_source
 
     destination = self.getMainAddress(u_destination)
@@ -190,23 +190,50 @@ class OlsrTopology():
       destination = self.getHnaGateway(u_destination)
       if destination != u_destination:
         #print "Destination %s is in an HNA. Using %s for path computation." % (u_destination, destination)
-        G.add_weighted_edges_from([(destination, u_destination, 0)])
+        self.G.add_weighted_edges_from([(destination, u_destination, 0)])
         destination = u_destination
 
-    if source in G.nodes() and destination in G.nodes():
-      return nx.dijkstra_path(G, source, destination)
-    elif source in G.nodes():
+    return (source, destination)
+
+  def get_etx(self, u_source, u_destination):
+    source, destination = self.__loadG(u_source, u_destination)
+
+    if source in self.G.nodes() and destination in self.G.nodes():
+      return nx.dijkstra_path_length(self.G, source, destination)
+    elif source in self.G.nodes():
       # find the closest gateway
       closestgw = None
       cost = 0
       for gw in self.gatewaylist:
-        splen = nx.shortest_path_length(G, source, gw)
+        splen = nx.shortest_path_length(self.G, source, gw)
         if splen > cost:
           cost = splen
           closestgw = gw
       if closestgw:
         #print "Warning: using gateway %s" % (closestgw,)
-        return nx.dijkstra_path(G, source, closestgw)
+        return nx.dijkstra_path_length(self.G, source, closestgw)
+      else:
+        return 1.0
+    else:
+      return 1.0
+
+  def get_shortest_path(self, u_source, u_destination):
+    source, destination = self.__loadG(u_source, u_destination)
+
+    if source in self.G.nodes() and destination in self.G.nodes():
+      return nx.dijkstra_path(self.G, source, destination)
+    elif source in self.G.nodes():
+      # find the closest gateway
+      closestgw = None
+      cost = 0
+      for gw in self.gatewaylist:
+        splen = nx.shortest_path_length(self.G, source, gw)
+        if splen > cost:
+          cost = splen
+          closestgw = gw
+      if closestgw:
+        #print "Warning: using gateway %s" % (closestgw,)
+        return nx.dijkstra_path(self.G, source, closestgw)
       else:
         return None
     else:
@@ -225,12 +252,20 @@ if __name__ == "__main__":
         if path == None or len(path) < 1:
                 #print "No path found. Please check the script parameters"
                 sys.exit(2)
+        previoushop = None
         for hop in path:
+          if previoushop != None:
+              print "%.3f\t" % t.get_etx(previoushop, hop),
+          else:
+              print "\t",
+
           print hop,
           aliases = t.getAliases(hop)
           if len(aliases) < 1:
             print ""
           else:
             print "\t (" + ", ".join(aliases) + ")"
+
+          previoushop = hop
 
 
