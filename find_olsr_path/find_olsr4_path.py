@@ -25,7 +25,7 @@ import urllib2
 import sys
 import json
 
-verbose = True
+verbose = False
 
 def printout(string):
     if verbose:
@@ -38,7 +38,7 @@ class InvalidOlsrJsonException(Exception):
 
 class oneWayLink():
   "a one-way OLSR link"
-  def __init__(self, linkDict):
+  def __init__(self, linkDict=None):
     if linkDict == None:
             return
     if not linkDict.has_key('destinationIP') or not linkDict.has_key('lastHopIP') or not linkDict.has_key('linkQuality') or not linkDict.has_key('neighborLinkQuality') or not linkDict.has_key('tcEdgeCost'):
@@ -50,12 +50,11 @@ class oneWayLink():
 
   def aliased_link(self, destination, lasthop):
     "return a copy of the link with changed IP addresses"
-    a = oneWayLink(None)
+    a = oneWayLink()
     a.__dict__.update(self.__dict__)
     a.destinationIP = destination
     a.lastHopIP = lasthop
     return a
-
 
 class Hna():
   "an OLSR HNA entry"
@@ -117,7 +116,7 @@ class OlsrTopology():
     return json_topology
  
   def update_topology(self):
-    json_topology = self.get_from_jsoninfo("/topology")
+    json_topology = self.get_from_jsoninfo("/all")
     topolist = json.loads(json_topology)['topology']
 
     # check for asymmetric links
@@ -128,25 +127,63 @@ class OlsrTopology():
       assert len(reverselinks) == 1
       self.linklist.append(link)
 
+    # add ourselves to the graph
+    mainaddr = json.loads(json_topology)['config']['mainIpAddress']
+    directlinklist = json.loads(json_topology)['links']
+    for dl in directlinklist:
+        # direct link
+        owl1 = oneWayLink()
+        owl1.lastHopIP = mainaddr
+        owl1.destinationIP = dl['remoteIP']
+        owl1.linkQuality = dl['linkQuality']
+        owl1.neighborLinkQuality = dl['neighborLinkQuality']
+        owl1.tcEdgeCost = dl['linkCost']
+
+        # reverse link
+        owl2 = oneWayLink()
+        owl2.lastHopIP = owl1.destinationIP
+        owl2.destinationIP = owl1.lastHopIP
+        owl2.linkQuality = owl1.neighborLinkQuality
+        owl2.neighborLinkQuality = owl1.linkQuality
+        owl2.tcEdgeCost = owl1.tcEdgeCost
+
+        self.linklist.append(owl1)
+        self.linklist.append(owl2)
+
     self.addressset = set([lnk.destinationIP for lnk in self.linklist] + [lnk.lastHopIP for link in self.linklist])
 
   def update_mids(self):
-    json_mids = self.get_from_jsoninfo("/mid")
+    json_mids = self.get_from_jsoninfo("/all")
     aliaslist = json.loads(json_mids)['mid']
     for aliasdef in aliaslist:
       self.aliasdict[aliasdef['ipAddress']] = [ alias['ipAddress'] for alias in aliasdef['aliases'] ]
 
+    interfacelist = json.loads(json_mids)['interfaces']
+    if len(interfacelist) < 2:
+        return
+    mainaddr = json.loads(json_mids)['config']['mainIpAddress']
+    self.aliasdict[mainaddr] = []
+    for interface in interfacelist:
+        ipaddr = interface['ipv4Address']
+        if mainaddr != ipaddr:
+            self.aliasdict[mainaddr].append(ipaddr)
+
   def update_hnas(self):
-    json_hnas = self.get_from_jsoninfo("/hna")
+    json_hnas = self.get_from_jsoninfo("/all")
     hnalist = json.loads(json_hnas)['hna']
     for hna in hnalist:
       self.hnalist.append(Hna(hna))
 
-  def update_gateways(self):
-    json_topology = self.get_from_jsoninfo("/hna")
-    hnalist = json.loads(json_topology)['hna']
+    localhnalist = json.loads(json_hnas)['config']['hna']
+    for hna in localhnalist:
+      self.hnalist.append(Hna(hna))
 
-    self.gatewaylist = [hna['gateway'] for hna in hnalist if hna['destination'] == "0.0.0.0"]
+  def update_gateways(self):
+    json_hnas = self.get_from_jsoninfo("/all")
+    hnalist = json.loads(json_hnas)['hna']
+    localhnalist = json.loads(json_hnas)['config']['hna']
+
+    self.gatewaylist = [hna['gateway'] for hna in hnalist + localhnalist if hna['destination'] == "0.0.0.0"]
 
   def is_gateway(self, address):
     return address in self.gatewaylist
