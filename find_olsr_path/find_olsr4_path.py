@@ -25,6 +25,12 @@ import urllib2
 import sys
 import json
 
+verbose = True
+
+def printout(string):
+    if verbose:
+        print string
+
 
 class InvalidOlsrJsonException(Exception):
   pass
@@ -181,7 +187,7 @@ class OlsrTopology():
     if source == u_source:
       source = self.getHnaGateway(u_source)
       if source != u_source:
-        #print "Source %s is in an HNA. Using %s for path computation." % (u_source, source)
+        printout( "Source %s is in an HNA. Using %s for path computation." % (u_source, source))
         self.G.add_weighted_edges_from([(u_source, source, 0)])
         source = u_source
 
@@ -189,7 +195,7 @@ class OlsrTopology():
     if destination == u_destination:
       destination = self.getHnaGateway(u_destination)
       if destination != u_destination:
-        #print "Destination %s is in an HNA. Using %s for path computation." % (u_destination, destination)
+        printout( "Destination %s is in an HNA. Using %s for path computation." % (u_destination, destination))
         self.G.add_weighted_edges_from([(destination, u_destination, 0)])
         destination = u_destination
 
@@ -210,7 +216,7 @@ class OlsrTopology():
           cost = splen
           closestgw = gw
       if closestgw:
-        #print "Warning: using gateway %s" % (closestgw,)
+        printout( "Warning: using gateway %s" % (closestgw,))
         return nx.dijkstra_path_length(self.G, source, closestgw)
       else:
         return 1.0
@@ -232,7 +238,7 @@ class OlsrTopology():
           cost = splen
           closestgw = gw
       if closestgw:
-        #print "Warning: using gateway %s" % (closestgw,)
+        printout( "Warning: using gateway %s" % (closestgw,))
         return nx.dijkstra_path(self.G, source, closestgw)
       else:
         return None
@@ -250,7 +256,7 @@ if __name__ == "__main__":
         t = OlsrTopology(urlorfile)
         path = t.get_shortest_path(src, dst)
         if path == None or len(path) < 1:
-                #print "No path found. Please check the script parameters"
+                printout( "No path found. Please check the script parameters")
                 sys.exit(2)
         previoushop = None
         for hop in path:
